@@ -7,14 +7,16 @@
   <meta name="viewport" content="width=device-width">
   <link rel="stylesheet" href="css/reset.css">
   <link rel="stylesheet" href="css/styles.css">
-  <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>
+  <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
   <script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.3.4.min.js"></script>
+  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
 </head>
 
 <body>
   
   <div id="main">
-    <h1>You're ready to use Parse!</h1>
+    <h1>OrganiCheck</h1>
 
     <p>Read the documentation and start building your JavaScript app:</p>
 
@@ -23,34 +25,169 @@
       <li><a href="https://www.parse.com/docs/js">Parse JavaScript API Documentation</a></li>
     </ul>
 
-    <div style="display:none" class="error">
-      Looks like there was a problem saving the test object. Make sure you've set your application ID and javascript key correctly in the call to <code>Parse.initialize</code> in this file.
+
+    <form class="form-horizontal" id="newCheckForm">
+    <fieldset>
+
+    <!-- Form Name -->
+    <legend>Nuevo cheque</legend>
+
+    <!-- Select Basic -->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_bank">Banco</label>
+      <div class="col-md-6">
+        <select id="check_bank" name="check_bank" class="form-control">
+        </select>
+      </div>
     </div>
 
-    <div style="display:none" class="success">
-      <p>We've also just created your first object using the following code:</p>
-      
-        <code>
-          var TestObject = Parse.Object.extend("TestObject");<br/>
-          var testObject = new TestObject();<br/>
-          testObject.save({foo: "bar"});
-        </code>
+    <!-- Text input-->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_number">Numero</label>  
+      <div class="col-md-6">
+      <input id="check_number" name="check_number" type="text" placeholder="" class="form-control input-md" required="">
+        
+      </div>
     </div>
+
+    <!-- Text input-->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_creation_date">Fecha de emisión</label>  
+      <div class="col-md-6">
+      <input id="check_creation_date" name="check_creation_date" type="text" placeholder="" class="form-control input-md" required="">
+        
+      </div>
+    </div>
+
+    <!-- Text input-->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_withdrawal_date">Fecha de cobro</label>  
+      <div class="col-md-6">
+      <input id="check_withdrawal_date" name="check_withdrawal_date" type="text" placeholder="" class="form-control input-md" required="">
+        
+      </div>
+    </div>
+
+    <!-- Prepended text-->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_amount">Prepended Text</label>
+      <div class="col-md-6">
+        <div class="input-group">
+          <span class="input-group-addon">$</span>
+          <input id="check_amount" name="check_amount" class="form-control" placeholder="" type="text" required="">
+        </div>
+        
+      </div>
+    </div>
+
+    <!-- Text input-->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_entity">Entidad</label>  
+      <div class="col-md-6">
+      <input id="check_entity" name="check_entity" type="text" placeholder="" class="form-control input-md" required="">
+        
+      </div>
+    </div>
+
+    <!-- Button -->
+    <div class="form-group">
+      <label class="col-md-4 control-label" for="check_save_button"></label>
+      <div class="col-md-4">
+        <button id="check_save_button" name="check_save_button" class="btn btn-primary">Guardar</button>
+      </div>
+    </div>
+
+    </fieldset>
+    </form>
+
+
   </div>
 
   <script type="text/javascript">
-    Parse.initialize("APPLICATION_ID", "JAVASCRIPT_KEY");
-    
-    var TestObject = Parse.Object.extend("TestObject");
-    var testObject = new TestObject();
-      testObject.save({foo: "bar"}, {
-      success: function(object) {
-        $(".success").show();
-      },
-      error: function(model, error) {
-        $(".error").show();
-      }
+    Parse.initialize("3qX8M8V6VOIj2Hq82ZZLlcif6MgjzLPbGoniRJPc", "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs");
+
+    /* global $,document,console,Parse */
+    $(document).ready(function() {
+      var parseAPPID = "3qX8M8V6VOIj2Hq82ZZLlcif6MgjzLPbGoniRJPc";
+      var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
+      Parse.initialize(parseAPPID, parseJSID);
+
+      // Simple syntax to create a new subclass of Parse.Object. Creating Check class
+      var CheckObject = Parse.Object.extend("Check");
+
+      //Once again, we extend the Parse.Object class to make the Bank class
+      var BankObject = Parse.Object.extend("Bank");
+
+      //This time, we use Parse.Query to generate a new query, specifically querying the Bank table.
+      var query = new Parse.Query(BankObject);
+
+      //We set constraints on the query.
+      query.ascending('name');
+
+      // Here we will store the options retrived from the query
+      var bankOptionList='';
+
+      //We submit the query and pass in callback functions.
+      query.find({
+        success: function(results) {
+          for (var i = 0; i < results.length; i++) { 
+            var bank = results[i];
+            bankOptionList+='<option value="' + bank.id + '">' + bank.get('name') + '</option>';
+          }
+          $("#check_bank").append(bankOptionList);
+        },
+        error: function(error) {
+          alert("Error obteniendo los bancos de la base de datos. Error code: " + error.message)
+        }
+      });
+      
+      $("#newCheckForm").on("submit", function(e) {
+        e.preventDefault();
+
+        console.log("Handling the submit of a new check");
+        //TODO: add error handling here
+        //gather the form data
+
+        var data = {};
+        var bankObjectId = $("#check_bank option:selected").val();
+        var bank = new BankObject();
+
+        query.get(bankObjectId, {
+          success: function(bank) {
+            alert("Banco obtenido: " + bank.id + " " + bank.get("name"));
+            // COMO ASIGNO EL BANCO??
+          },
+          error: function(bank, error) {
+            alert("Error obteniendo el banco elegido de la base de datos. Error code: " + error.message)
+          }
+        });
+        data.number = $("#check_number").val();
+        data.creationDate = $("#check_creation_date").val();
+        data.withDrawalDate = $("#check_withdrawal_date").val();
+        data.entity = $("#check_entity").val();
+        data.amount = $("#check_amount").val();
+        data.bank = bank;
+        alert(" Afueraa banco: " + bank.get("name"));
+
+        // Create a new instance of that Check class.
+        console.log(data);
+        console.log(bank);
+        var check = new CheckObject();
+        check.save(data, {
+          success:function(check) {
+            console.log("Success, new check created: " + check.id);
+            alert("Cheque creado!");
+          },
+          error:function(check, error) {
+            console.dir(error);
+            alert('Failed to create new check. Error code: ' + error.message);
+          }
+        });
+        
+      });
+      
     });
+     
   </script>
 </body>
 
