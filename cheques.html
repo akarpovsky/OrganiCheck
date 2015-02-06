@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+
+  <title>OrganiCheck v1.0</title>
+  <meta name="description" content="My Parse App">
+  <meta name="viewport" content="width=device-width">
+  <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+  <script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.3.4.min.js"></script>
+  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.min.js"></script>
+
+  <style type="text/css">
+    body {
+      min-height: 2000px;
+      padding-top: 70px;
+  }
+  </style>
+
+	<script id="check_template" type="text/html">
+  
+    <li class="panel panel-info">
+        <div class="panel-heading">{{entity}} - # {{number}}</div>
+        <div class="panel-body">
+        	<b>$ {{amount}}</b>
+        	<p>A cobrar el dia {{withdrawalDate}} en {{bank}}</p>
+        </div>
+		<div class="panel-footer">Pie del panel</div>
+
+    </li>
+	</script>
+</head>
+
+<body>
+
+  <!-- Fixed navbar -->
+  <nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <a class="navbar-brand" href="#">OrganiCheck</a>
+      </div>
+    </div>
+  </nav>
+  
+  <div id="main" class="container">
+  	<ul id="checksList" class="list-unstyled">
+  	</ul>
+  </div>
+  
+  <script type="text/javascript">
+    var parseAPPID = "3qX8M8V6VOIj2Hq82ZZLlcif6MgjzLPbGoniRJPc";
+    var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
+    Parse.initialize(parseAPPID, parseJSID);
+
+    /* global $,document,console,Parse */
+    $(document).ready(function() {
+      // Simple syntax to create a new subclass of Parse.Object. Creating Check class
+      	var CheckObject = Parse.Object.extend("Check");
+		var query = new Parse.Query(CheckObject);
+		var view = {};
+		query.find({
+		  success: function(results) {
+            
+		    console.log("Successfully retrieved " + results.length + " scores.");
+		    // Do something with the returned Parse.Object values
+		    for (var i = 0; i < results.length; i++) { 
+		      	var object = results[i];
+				var data = {
+					amount: "hola"
+				};
+		    	var template = document.getElementById("check_template").innerHTML;
+				var output = Mustache.render(template, object.toJSON());
+				$("#checksList").append(output);
+		    }
+		  },
+		  error: function(error) {
+		    alert("Error: " + error.code + " " + error.message);
+		  }
+		});
+
+		
+  	});
+
+  </script>
+</body>
+</html>
