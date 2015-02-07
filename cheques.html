@@ -10,6 +10,7 @@
   <script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.3.4.min.js"></script>
   <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.min.js"></script>
 
   <style type="text/css">
@@ -20,16 +21,25 @@
   </style>
 
 	<script id="check_template" type="text/html">
-  
-    <li class="panel panel-info">
-        <div class="panel-heading">{{entity}} - # {{number}}</div>
-        <div class="panel-body">
-        	<b>$ {{amount}}</b>
-        	<p>A cobrar el dia {{withdrawalDate}} en {{bank}}</p>
-        </div>
-		<div class="panel-footer">Pie del panel</div>
-
-    </li>
+	    <div class="panel panel-default">
+	            <div class="panel-heading" data-toggle="collapse" data-parent="#checksList" data-target="#collapse{{objectId}}" >
+	                <h4 class="panel-title">
+	                    {{entity}}   ($ {{amount}})
+	                    <span class="pull-right clickable"><i class="glyphicon glyphicon-chevron-down"></i></span>
+	                </h4>
+	            </div>
+	            <div id="collapse{{objectId}}" class="panel-collapse collapse in">
+	                <div class="panel-body">
+	                	<p>Banco: <b>{{bank}}</b>  - <i># {{number}}</i></p>
+	                    <p>Fecha de emisión: <b>{{creationDateString}}</b></p>
+	                    <p>Fecha de cobro: <b>{{withdrawalDateString}}</b></p>
+	                </div>
+			   		<div class="panel-footer">
+						    <a class="btn btn-success" href="#">Cobrado</a>
+						    <a class="btn btn-danger" href="#">Cancelado</a>
+			   		</div>
+	            </div>
+	     </div>
 	</script>
 </head>
 
@@ -39,14 +49,59 @@
   <nav class="navbar navbar-default navbar-fixed-top">
     <div class="container">
       <div class="navbar-header">
-        <a class="navbar-brand" href="#">OrganiCheck</a>
+        <a class="navbar-brand" href="/OrganiCheck/">OrganiCheck</a>
       </div>
     </div>
   </nav>
   
   <div id="main" class="container">
-  	<ul id="checksList" class="list-unstyled">
-  	</ul>
+
+	<div id="dayWeekMonthBtnGroup" class="btn-group btn-group-justified" role="group">
+      <a href="#" class="btn btn-default active" role="button">Hoy</a>
+      <a href="#" class="btn btn-default" role="button">Semana</a>
+      <a href="#" class="btn btn-default" role="button">Mes</a>
+    </div>
+
+    <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group">
+      <a href="#" class="btn btn-default" role="button">Hoy</a>
+      <a href="#" class="btn btn-default" role="button">Semana</a>
+      <a href="#" class="btn btn-default" role="button">Mes</a>
+    </div>
+
+	<div class="btn-group" data-toggle="buttons">
+		<label class="btn btn-primary active">
+			<input type="radio" name="options" id="option1" autocomplete="off" checked> Hoy
+		</label>
+		<label class="btn btn-primary">
+			<input type="radio" name="options" id="option2" autocomplete="off"> Semana
+		</label>
+		<label class="btn btn-primary">
+			<input type="radio" name="options" id="option3" autocomplete="off"> Mes
+		</label>
+	</div>
+
+    <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group" data-toggle="buttons" >
+	  <label class="btn btn-primary active">
+	    <input type="checkbox" autocomplete="off" checked> Emitido
+	  </label>
+	  <label class="btn btn-primary">
+	    <input type="checkbox" autocomplete="off"> Cobrado
+	  </label>
+	  <label class="btn btn-primary">
+	    <input type="checkbox" autocomplete="off"> Rechazado
+	  </label>
+	  <label class="btn btn-primary">
+	    <input type="checkbox" autocomplete="off"> Anulado
+	  </label>
+	</div>
+
+    <br />
+    <div id="dateRangeLabel">Mostrando cheques entre las fechas: <span id="queryStartDate"></span> y <span id="queryEndDate"></span></div>
+    <br />
+  	<div id="totalsByBank">
+  	</div>
+  	<div class="panel-group" id="checksList">
+  	</div>
   </div>
   
   <script type="text/javascript">
@@ -56,6 +111,39 @@
 
     /* global $,document,console,Parse */
     $(document).ready(function() {
+
+      $("#dayWeekMonthBtnGroup > .btn").on('click', function (e) {
+        $(this).addClass('active');
+        $(this).siblings().removeClass('active');
+        //do any other button related things
+      });
+	  
+	  // Hide date range label
+	  $("#dateRangeLabel").hide();
+
+	  var queryStartDate;
+	  var queryEndDate;
+      $("#dayWeekMonthBtnGroup a").click(function () {
+   		 switch($(this).text()){
+		  	case "Semana":
+		  		queryStartDate = moment().locale("es").startOf('week');
+		  		queryEndDate = moment().locale("es").endOf('week');
+		  		break;
+		  	case "Mes":
+		  		queryStartDate = moment().locale("es").startOf('month');
+		  		queryEndDate = moment().locale("es").endOf('month');
+		  		break;
+		  	case "Hoy":
+		  	default:
+			  	queryStartDate = queryEndDate = moment().locale("es");
+		  		break;	
+		  }
+		  $("#queryStartDate").text(queryStartDate.format("dddd DD/MM/YYYY"));
+		  $("#queryEndDate").text(queryEndDate.format("dddd DD/MM/YYYY"));
+		  $("#dateRangeLabel").show();
+
+	  });
+
       // Simple syntax to create a new subclass of Parse.Object. Creating Check class
       	var CheckObject = Parse.Object.extend("Check");
 		var query = new Parse.Query(CheckObject);
@@ -67,19 +155,20 @@
 		    // Do something with the returned Parse.Object values
 		    for (var i = 0; i < results.length; i++) { 
 		      	var object = results[i];
-				var data = {
-					amount: "hola"
-				};
 		    	var template = document.getElementById("check_template").innerHTML;
-				var output = Mustache.render(template, object.toJSON());
+		    	var objectJSON = object.toJSON();
+		    	objectJSON.creationDateString = moment(object.get("creationDate")).format("DD/MM/YYYY");
+		    	objectJSON.withdrawalDateString = moment(object.get("withdrawalDate")).format("DD/MM/YYYY");
+				var output = Mustache.render(template, objectJSON);
+				console.log(objectJSON);
 				$("#checksList").append(output);
 		    }
+		    $('#checksList .in').collapse('hide'); // Collapse all panels
 		  },
 		  error: function(error) {
 		    alert("Error: " + error.code + " " + error.message);
 		  }
 		});
-
 		
   	});
 
