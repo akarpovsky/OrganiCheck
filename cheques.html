@@ -18,6 +18,18 @@
       min-height: 2000px;
       padding-top: 70px;
   }
+
+  	/* !important */
+	.active
+	{
+		font-weight: normal !important;
+		text-decoration: underline !important;
+	}
+	/* Same-selector Overwriting */
+	a.active
+	{
+	   font-weight: normal;
+	}
   </style>
 
 	<script id="check_template" type="text/html">
@@ -35,8 +47,9 @@
 	                    <p>Fecha de cobro: <b>{{withdrawalDateString}}</b></p>
 	                </div>
 			   		<div class="panel-footer">
-						    <a class="btn btn-success" href="#">Cobrado</a>
-						    <a class="btn btn-danger" href="#">Cancelado</a>
+						    <a class="btn btn-success" href="#"><span class="glyphicon glyphicon-ok"></span> </a>
+						    <a class="btn btn-danger" href="#"><span class="glyphicon glyphicon-remove"></span> </a>
+						    <a class="btn btn-warning" href="#"><span class="glyphicon glyphicon-trash"></span> </a>
 			   		</div>
 	            </div>
 	     </div>
@@ -56,41 +69,33 @@
   
   <div id="main" class="container">
 
-	<div id="dayWeekMonthBtnGroup" class="btn-group btn-group-justified" role="group">
-      <a href="#" class="btn btn-default active" role="button">Hoy</a>
-      <a href="#" class="btn btn-default" role="button">Semana</a>
-      <a href="#" class="btn btn-default" role="button">Mes</a>
-    </div>
-
-    <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group">
-      <a href="#" class="btn btn-default" role="button">Hoy</a>
-      <a href="#" class="btn btn-default" role="button">Semana</a>
-      <a href="#" class="btn btn-default" role="button">Mes</a>
-    </div>
-
-	<div class="btn-group" data-toggle="buttons">
+	<div id="dayWeekMonthBtnGroup" class="btn-group btn-group-justified" role="group" data-toggle="buttons">
 		<label class="btn btn-primary active">
-			<input type="radio" name="options" id="option1" autocomplete="off" checked> Hoy
+			<input type="radio" name="dayWeekMonthOptions" id="option1" autocomplete="off" checked value="Hoy"> Hoy
 		</label>
 		<label class="btn btn-primary">
-			<input type="radio" name="options" id="option2" autocomplete="off"> Semana
+			<input type="radio" name="dayWeekMonthOptions" id="option2" autocomplete="off" value="Semana"> Semana
 		</label>
 		<label class="btn btn-primary">
-			<input type="radio" name="options" id="option3" autocomplete="off"> Mes
+			<input type="radio" name="dayWeekMonthOptions" id="option3" autocomplete="off" value="Mes"> Mes
 		</label>
 	</div>
-
+	<br />
     <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group" data-toggle="buttons" >
-	  <label class="btn btn-primary active">
+	  <label class="btn btn-info active">
+	  	<span class="glyphicon glyphicon-pencil"> </span><br />
 	    <input type="checkbox" autocomplete="off" checked> Emitido
 	  </label>
-	  <label class="btn btn-primary">
+	  <label class="btn btn-success">
+	  	<span class="glyphicon glyphicon-ok"> </span><br />
 	    <input type="checkbox" autocomplete="off"> Cobrado
 	  </label>
-	  <label class="btn btn-primary">
+	  <label class="btn btn-danger">
+	  	<span class="glyphicon glyphicon-remove"> </span><br />
 	    <input type="checkbox" autocomplete="off"> Rechazado
 	  </label>
-	  <label class="btn btn-primary">
+	  <label class="btn btn-warning">
+	  	<span class="glyphicon glyphicon-trash"> </span><br />
 	    <input type="checkbox" autocomplete="off"> Anulado
 	  </label>
 	</div>
@@ -112,19 +117,14 @@
     /* global $,document,console,Parse */
     $(document).ready(function() {
 
-      $("#dayWeekMonthBtnGroup > .btn").on('click', function (e) {
-        $(this).addClass('active');
-        $(this).siblings().removeClass('active');
-        //do any other button related things
-      });
-	  
 	  // Hide date range label
 	  $("#dateRangeLabel").hide();
 
 	  var queryStartDate;
 	  var queryEndDate;
-      $("#dayWeekMonthBtnGroup a").click(function () {
-   		 switch($(this).text()){
+
+      $('#dayWeekMonthBtnGroup input[name="dayWeekMonthOptions"]').change(function () {
+   		 switch($(this).val()){
 		  	case "Semana":
 		  		queryStartDate = moment().locale("es").startOf('week');
 		  		queryEndDate = moment().locale("es").endOf('week');
