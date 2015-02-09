@@ -197,50 +197,44 @@
 
         console.log("Handling the submit of a new check");
         //TODO: add error handling here
-        //gather the form data
 
-        var data = {};
         var bankObjectId = $("#check_bank option:selected").val();
-        var bank = new BankObject();
+        var check = new CheckObject();
 
         query.get(bankObjectId, {
-          success: function(bank) {
-            alert("Banco obtenido: " + bank.id + " " + bank.get("name"));
-            bank = bank;
-            // COMO ASIGNO EL BANCO??
+          success: function(object) {
+            alert("Banco obtenido: " + object.id + " " + object.get("name"));
+            check.set("bank", object); // Assign obtained bank to new check
+            
+            //gather the form data
+            check.set("number", $("#check_number").val());
+            var creationDateString = $("#check_creation_date").val();
+            var arrCreationDate = creationDateString.split("/");
+            check.set("creationDate", new Date(arrCreationDate[2], arrCreationDate[1] -1, arrCreationDate[0]));
+            
+            var withdrawalDateString = $("#check_withdrawal_date").val();
+            var arrWithdrawalDate = withdrawalDateString.split("/");
+            check.set("withdrawalDate", new Date(arrWithdrawalDate[2], arrWithdrawalDate[1] -1, arrWithdrawalDate[0]));
+
+            check.set("entity", $("#check_entity").val());
+            check.set("amount", $("#check_amount").val());
+            console.log(check);
+
+            // Create a new instance of that Check class.
+            check.save(null, {
+              success:function(check) {
+                console.log("Success, new check created: " + check.id);
+              },
+              error:function(check, error) {
+                console.dir(error);
+                alert('Failed to create new check. Error code: ' + error.message);
+              }
+            });
           },
-          error: function(bank, error) {
+          error: function(object, error) {
             alert("Error obteniendo el banco elegido de la base de datos. Error code: " + error.message)
           }
-        });
-        data.number = $("#check_number").val();
-        data.bank = $("#check_bank option:selected").text();
-
-        var creationDateString = $("#check_creation_date").val();
-        var arrCreationDate = creationDateString.split("/");
-        data.creationDate = new Date(arrCreationDate[2], arrCreationDate[1] -1, arrCreationDate[0]);
-        
-        var withdrawalDateString = $("#check_withdrawal_date").val();
-        var arrWithdrawalDate = creationDateString.split("/");
-        data.withdrawalDate = new Date(arrWithdrawalDate[2], arrWithdrawalDate[1] -1, arrWithdrawalDate[0]);
-
-        data.entity = $("#check_entity").val();
-        data.amount = $("#check_amount").val();
-
-        // Create a new instance of that Check class.
-        console.log(data);
-
-        var check = new CheckObject();
-        check.save(data, {
-          success:function(check) {
-            console.log("Success, new check created: " + check.id);
-            alert("Cheque creado!");
-          },
-          error:function(check, error) {
-            console.dir(error);
-            alert('Failed to create new check. Error code: ' + error.message);
-          }
-        });
+        }); // End of getting bank and creating new check
         
       });
       

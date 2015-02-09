@@ -84,19 +84,19 @@
     <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group" data-toggle="buttons" >
 	  <label class="btn btn-info active">
 	  	<span class="glyphicon glyphicon-pencil"> </span><br />
-	    <input type="checkbox" autocomplete="off" checked> Emitido
+	    <input type="checkbox" autocomplete="off" checked><small>Emitido</small>
 	  </label>
 	  <label class="btn btn-success">
 	  	<span class="glyphicon glyphicon-ok"> </span><br />
-	    <input type="checkbox" autocomplete="off"> Cobrado
+	    <input type="checkbox" autocomplete="off"><small>Cobrado</small>
 	  </label>
 	  <label class="btn btn-danger">
 	  	<span class="glyphicon glyphicon-remove"> </span><br />
-	    <input type="checkbox" autocomplete="off"> Rechazado
+	    <input type="checkbox" autocomplete="off"><small>Rechazado</small>
 	  </label>
 	  <label class="btn btn-warning">
 	  	<span class="glyphicon glyphicon-trash"> </span><br />
-	    <input type="checkbox" autocomplete="off"> Anulado
+	    <input type="checkbox" autocomplete="off"><small>Anulado</small>
 	  </label>
 	</div>
 
@@ -113,6 +113,65 @@
     var parseAPPID = "3qX8M8V6VOIj2Hq82ZZLlcif6MgjzLPbGoniRJPc";
     var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
     Parse.initialize(parseAPPID, parseJSID);
+
+	function getChecksForBankBetweenDates($bankId, $startDate, $endDate, $checkStatus, callback) {
+  		
+  		bankId = (typeof bankId === "undefined") ? null : bankId;
+  		startDate = (typeof startDate === "undefined") ? null : startDate;
+  		endDate = (typeof endDate === "undefined") ? null : endDate;
+  		checkStatus = (typeof checkStatus === "undefined") ? null : checkStatus;
+
+
+  		var CheckObject = Parse.Object.extend("Check");
+		var mainQuery = new Parse.Query(CheckObject);
+  		
+  		// Matchink Bank
+		if ($bankId !== null) {
+			var BankObject = Parse.Object.extend("Bank");
+			var innerBankQuery = new Parse.Query(BankObject);
+			innerBankQuery.equalTo("objectId", $bankId);
+			mainQuery.matchesQuery("bank", innerBankQuery);
+		}
+		
+		// Matching Entity
+		var entityCheckQuery = new Parse.Query(CheckObject);
+		entityCheckQuery.equalTo("entity", "Sarasa");
+
+
+		if(($startDate !== null )&& ($endDate !== null) ){
+			// Matching checks between dates
+			mainQuery.greaterThanOrEqualTo( "withdrawalDate", $startDate );
+			mainQuery.lessThanOrEqualTo( "withdrawalDate", $endDate );
+		};
+
+		if ($checkStatus != null) {
+			mainQuery.equalTo("status", $checkStatus);
+		};
+
+
+		var checkCollection = mainQuery.collection();
+		checkCollection.fetch({
+		  success: function(results) {
+		  	var JSONresults = results.toJSON();
+		  	console.log(JSONresults);
+		    for (var i = 0; i < JSONresults.length; i++) { 
+		    	// Forma de acceder a los elementos
+		    	/*alert(JSONresults[i]["entity"]);*/
+	          }
+	          callback(JSONresults);
+		  }
+		});
+	}
+
+	function logit(thingsToLog) {
+		console.log("SARASA");
+		console.log(thingsToLog);
+	}
+
+
+	var sarasa = getChecksForBankBetweenDates("hLVMkAGFuQ", moment("08/02/2015", "DD/MM/YYYY").toDate(), moment("08/02/2015", "DD/MM/YYYY").toDate(), null, logit);
+
+    
 
     /* global $,document,console,Parse */
     $(document).ready(function() {
