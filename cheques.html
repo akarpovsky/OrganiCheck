@@ -33,11 +33,12 @@
   </style>
 
 	<script id="check_template" type="text/html">
-	    <div class="panel panel-default">
+	    <div class="panel panel-{{checkStatusClass}}">
 	            <div class="panel-heading" data-toggle="collapse" data-parent="#checksList" data-target="#collapse{{objectId}}" >
 	                <h4 class="panel-title">
 	                    {{entity}}   ($ {{amount}})
-	                    <span class="pull-right clickable"><i class="glyphicon glyphicon-chevron-down"></i></span>
+	                    <span class="pull-right clickable"><i class="glyphicon glyphicon-chevron-down"></i></span>    
+	                    <span class="pull-right label label-{{checkStatusClass}}" style="margin-right: 5px;">{{status}}</span>
 	                </h4>
 	            </div>
 	            <div id="collapse{{objectId}}" class="panel-collapse collapse in">
@@ -84,19 +85,19 @@
     <div id="checkStatusBtnGroup" class="btn-group btn-group-justified" role="group" data-toggle="buttons" >
 	  <label class="btn btn-info active">
 	  	<span class="glyphicon glyphicon-pencil"> </span><br />
-	    <input type="checkbox" autocomplete="off" checked><small>Emitido</small>
+	    <input type="checkbox" name="checkStatusCheckbox" autocomplete="off" checked value="Emitido"><small>Emitido</small>
 	  </label>
 	  <label class="btn btn-success">
 	  	<span class="glyphicon glyphicon-ok"> </span><br />
-	    <input type="checkbox" autocomplete="off"><small>Cobrado</small>
+	    <input type="checkbox" name="checkStatusCheckbox" autocomplete="off" value="Cobrado"><small>Cobrado</small>
 	  </label>
 	  <label class="btn btn-danger">
 	  	<span class="glyphicon glyphicon-remove"> </span><br />
-	    <input type="checkbox" autocomplete="off"><small>Rechazado</small>
+	    <input type="checkbox" name="checkStatusCheckbox" autocomplete="off" value="Rechazado"><small>Rechazado</small>
 	  </label>
 	  <label class="btn btn-warning">
 	  	<span class="glyphicon glyphicon-trash"> </span><br />
-	    <input type="checkbox" autocomplete="off"><small>Anulado</small>
+	    <input type="checkbox" name="checkStatusCheckbox" autocomplete="off" value="Anulado"><small>Anulado</small>
 	  </label>
 	</div>
 
@@ -114,12 +115,12 @@
     var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
     Parse.initialize(parseAPPID, parseJSID);
 
-	function getChecksForBankBetweenDates($bankId, $startDate, $endDate, $checkStatus, callback) {
+	function getChecksForBankBetweenDates($bankId, $startDate, $endDate, $checkStatusArray, callback) {
   		
   		bankId = (typeof bankId === "undefined") ? null : bankId;
   		startDate = (typeof startDate === "undefined") ? null : startDate;
   		endDate = (typeof endDate === "undefined") ? null : endDate;
-  		checkStatus = (typeof checkStatus === "undefined") ? null : checkStatus;
+  		checkStatusArray = (typeof checkStatusArray === "undefined") ? null : checkStatusArray;
 
 
   		var CheckObject = Parse.Object.extend("Check");
@@ -144,42 +145,89 @@
 			mainQuery.lessThanOrEqualTo( "withdrawalDate", $endDate );
 		};
 
-		if ($checkStatus != null) {
-			mainQuery.equalTo("status", $checkStatus);
+
+		if ($checkStatusArray != null) {
+			mainQuery.containedIn("status",$checkStatusArray);
 		};
 
 
 		var checkCollection = mainQuery.collection();
 		checkCollection.fetch({
 		  success: function(results) {
+		  	console.log("Successfully retrieved " + results.length + " checks.");
 		  	var JSONresults = results.toJSON();
 		  	console.log(JSONresults);
-		    for (var i = 0; i < JSONresults.length; i++) { 
-		    	// Forma de acceder a los elementos
-		    	/*alert(JSONresults[i]["entity"]);*/
-	          }
-	          callback(JSONresults);
+	        callback(JSONresults);
 		  }
 		});
 	}
 
-	function logit(thingsToLog) {
-		console.log(thingsToLog);
+	function getEnabledCheckStatuses(checkStatusArray) {
+		ans = [];
+		for(var item in checkStatusArray) {
+ 				if(checkStatusArray[item]){
+ 					ans.push(item);
+ 				}
+			};
+			console.log(ans)
+			return ans;
+	}
+
+	function renderChecksPanels($checksJSONArray){
+		$("#checksList").empty();
+		for (var i = 0; i < $checksJSONArray.length; i++) { 
+		      	var objectJSON = $checksJSONArray[i];
+		    	objectJSON.creationDateString = moment(objectJSON["creationDate"].iso).format("DD/MM/YYYY");
+		    	objectJSON.withdrawalDateString = moment(objectJSON["withdrawalDate"].iso).format("DD/MM/YYYY");
+		      	objectJSON["checkStatusClass"] =  function () {
+		      		switch(this.status){
+		      			case "Cobrado":
+		      				return "success";
+		      				break;
+		      			case "Rechazado":
+		      				return "danger";
+		      				break;
+		      			case "Anulado":
+		      				return "warning";
+		      				break;
+		      			default:
+		      			case "Emitido":
+		      				return "info";
+		      				break;
+		      								
+		      		}
+   				 return this.status + " " + this.status;
+  				};
+		      	var template = document.getElementById("check_template").innerHTML;
+				var output = Mustache.render(template, objectJSON);
+				console.log(objectJSON);
+				$("#checksList").append(output);
+		    }
+		    $('#checksList .in').collapse('hide'); // Collapse all panels
 	}
 
 
-	var sarasa = getChecksForBankBetweenDates("hLVMkAGFuQ", moment("08/02/2015", "DD/MM/YYYY").toDate(), moment("08/02/2015", "DD/MM/YYYY").toDate(), null, logit);
+	/*var sarasa = getChecksForBankBetweenDates("hLVMkAGFuQ", moment("14/02/2015", "DD/MM/YYYY").toDate(), moment("15/02/2015", "DD/MM/YYYY").toDate(), ["Emitido", "Cobrado"], renderChecksPanels);*/
 
     
 
     /* global $,document,console,Parse */
     $(document).ready(function() {
 
-	  // Hide date range label
-	  $("#dateRangeLabel").hide();
+		// Hide date range label
+		$("#dateRangeLabel").hide();
 
-	  var queryStartDate;
-	  var queryEndDate;
+		var queryStartDate;
+		var queryEndDate;
+		// Default value today
+		queryStartDate = queryEndDate = moment().locale("es");
+		var checkStatusArray = {};
+
+		// adding object to set    
+		checkStatusArray['Emitido'] = true;
+		checkStatusArray['Cobrado'] = false;
+		checkStatusArray['Rechazado'] = false;
+		checkStatusArray['Anulado'] = false;
 
       $('#dayWeekMonthBtnGroup input[name="dayWeekMonthOptions"]').change(function () {
    		 switch($(this).val()){
@@ -200,33 +248,23 @@
 		  $("#queryEndDate").text(queryEndDate.format("dddd DD/MM/YYYY"));
 		  $("#dateRangeLabel").show();
 
+		  getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+
 	  });
 
-      // Simple syntax to create a new subclass of Parse.Object. Creating Check class
-      	var CheckObject = Parse.Object.extend("Check");
-		var query = new Parse.Query(CheckObject);
-		var view = {};
-		query.find({
-		  success: function(results) {
-            
-		    console.log("Successfully retrieved " + results.length + " scores.");
-		    // Do something with the returned Parse.Object values
-		    for (var i = 0; i < results.length; i++) { 
-		      	var object = results[i];
-		    	var template = document.getElementById("check_template").innerHTML;
-		    	var objectJSON = object.toJSON();
-		    	objectJSON.creationDateString = moment(object.get("creationDate")).format("DD/MM/YYYY");
-		    	objectJSON.withdrawalDateString = moment(object.get("withdrawalDate")).format("DD/MM/YYYY");
-				var output = Mustache.render(template, objectJSON);
-				console.log(objectJSON);
-				$("#checksList").append(output);
-		    }
-		    $('#checksList .in').collapse('hide'); // Collapse all panels
-		  },
-		  error: function(error) {
-		    alert("Error: " + error.code + " " + error.message);
-		  }
-		});
+  	  $('#checkStatusBtnGroup input[name="checkStatusCheckbox"]').change(function () {
+			$('#checkStatusBtnGroup input[name="checkStatusCheckbox"]').each(function(){
+				if($(this).prop('checked')){
+					checkStatusArray[$(this).val()] = true;
+				}else{
+					checkStatusArray[$(this).val()] = false;
+				}
+			});
+			
+			getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+	  });
+
+  	  	getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
 		
   	});
 
