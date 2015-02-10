@@ -156,7 +156,6 @@
 		  success: function(results) {
 		  	console.log("Successfully retrieved " + results.length + " checks.");
 		  	var JSONresults = results.toJSON();
-		  	console.log(JSONresults);
 	        callback(JSONresults);
 		  }
 		});
@@ -169,12 +168,16 @@
  					ans.push(item);
  				}
 			};
-			console.log(ans)
 			return ans;
 	}
 
 	function renderChecksPanels($checksJSONArray){
 		$("#checksList").empty();
+		if(jQuery.isEmptyObject($checksJSONArray)){
+			$("#checksList").append('<div class="alert alert-danger" role="alert"><b>No se han encontrado cheques.</b> Pruebe cambiando los filtros de busqueda.</div>');
+			console.log("No checks to display!");
+			return;
+		}
 		for (var i = 0; i < $checksJSONArray.length; i++) { 
 		      	var objectJSON = $checksJSONArray[i];
 		    	objectJSON.creationDateString = moment(objectJSON["creationDate"].iso).format("DD/MM/YYYY");
@@ -200,7 +203,6 @@
   				};
 		      	var template = document.getElementById("check_template").innerHTML;
 				var output = Mustache.render(template, objectJSON);
-				console.log(objectJSON);
 				$("#checksList").append(output);
 		    }
 		    $('#checksList .in').collapse('hide'); // Collapse all panels
