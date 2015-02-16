@@ -8,10 +8,12 @@
   <meta name="viewport" content="width=device-width">
   <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
   <script type="text/javascript" src="http://www.parsecdn.com/js/parse-1.3.4.min.js"></script>
-  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
   <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.9.0/moment-with-locales.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.min.js"></script>
+  <script type="text/javascript" src="./js/bootstrap-datetimepicker.min.js"></script>
+  <link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="./css/bootstrap-datetimepicker.min.css" />
 
   <style type="text/css">
     body {
@@ -102,19 +104,20 @@
 	</div>
 	<br />
 
-	<form class="form-inline">
-	  <div class="form-group">
-	    <label for="exampleInputName2">Desde: </label>
-	    <input type="text" class="form-control" id="queryStartDateInput">
+	<div class="container">
+        <div class='col-sm-4'>
+        	<label for="exampleInputName2">Desde: </label>
+            <input type='text' class="form-control" id='queryStartDateInput'/>
+        </div>
+        <div class='col-sm-4'>
+        	<label for="exampleInputName2">Hasta: </label>
+            <input type='text' class="form-control" id='queryEndDateInput'/>
+        </div>
+        <div class="col-sm-4">
+        	<label for="exampleInputName2">Banco: </label>
+	  		<select id="check_bank" name="check_bank" class="form-control"></select>
 	  </div>
-	  <div class="form-group">
-	    <label for="exampleInputEmail2">Hasta: </label>
-	    <input type="email" class="form-control" id="queryEndDateInput">
-	  </div>
-	  <div class="form-group">
-	  	<select id="check_bank" name="check_bank" class="form-control"></select>
-	  </div>
-	</form>
+    </div>
 
     <br />
     <div id="dateRangeLabel">Mostrando cheques entre las fechas: <span id="queryStartDate"></span> y <span id="queryEndDate"></span></div>
@@ -126,6 +129,11 @@
   </div>
   
   <script type="text/javascript">
+	var queryStartDate;
+	var queryEndDate;
+	var bankQueryId;
+	var checkStatusArray = {};
+
     var parseAPPID = "3qX8M8V6VOIj2Hq82ZZLlcif6MgjzLPbGoniRJPc";
     var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
     Parse.initialize(parseAPPID, parseJSID);
@@ -159,11 +167,15 @@
     }
 
 	function getChecksForBankBetweenDates($bankId, $startDate, $endDate, $checkStatusArray, callback) {
-  		
-  		bankId = (typeof bankId === "undefined") ? null : bankId;
-  		startDate = (typeof startDate === "undefined") ? null : startDate;
-  		endDate = (typeof endDate === "undefined") ? null : endDate;
+  		$bankId = (typeof $bankId === "undefined") ? null : $bankId;
+  		$startDate = (typeof $startDate === "undefined") ? null : $startDate;
+  		$endDate = (typeof $endDate === "undefined") ? null : $endDate;
   		checkStatusArray = (typeof checkStatusArray === "undefined") ? null : checkStatusArray;
+  		console.log("Dates:");
+  		console.log($startDate);
+  		console.log($endDate);
+  		console.log("Banco:");
+  		console.log($bankId);
 
 
   		var CheckObject = Parse.Object.extend("Check");
@@ -186,6 +198,9 @@
 
 		if(($startDate !== null )&& ($endDate !== null) ){
 			// Matching checks between dates
+			console.log("searching between dates..");
+			console.log($startDate);
+  			console.log($endDate);
 			mainQuery.greaterThanOrEqualTo( "withdrawalDate", $startDate );
 			mainQuery.lessThanOrEqualTo( "withdrawalDate", $endDate );
 		};
@@ -230,12 +245,14 @@
 		for (var i = 0; i < $checksJSONArray.length; i++) { 
 				var checkObject = $checksJSONArray[i];
 				var bankName = $checksJSONArray[i].get("bank").get("name");
-				console.log(bankTotals[bankName] ? bankTotals[bankName] : 0);
 				bankTotals[bankName] = parseFloat((bankTotals[bankName] ? bankTotals[bankName] : 0)) + parseFloat(checkObject.get("amount"));
 		      	var objectJSON = $checksJSONArray[i].toJSON();
 		      	objectJSON.bankName = bankName;
-		    	objectJSON.creationDateString = moment(checkObject.get("creationDate").iso).format("DD/MM/YYYY");
-		    	objectJSON.withdrawalDateString = moment(checkObject.get("withdrawalDate").iso).format("DD/MM/YYYY");
+		    	objectJSON.creationDateString = moment(checkObject.get("creationDate")).format("DD/MM/YYYY");
+		    	console.log("Creation Date:");
+		    	console.log(checkObject.get("creationDate"));
+		    	console.log(moment(checkObject.get("creationDate")));
+		    	objectJSON.withdrawalDateString = moment(checkObject.get("withdrawalDate")).format("DD/MM/YYYY");
 		      	objectJSON.checkStatusClass =  function () {
 		      		switch(checkObject.get("status")){
 		      			case "Cobrado":
@@ -267,23 +284,38 @@
 
 	/*var sarasa = getChecksForBankBetweenDates("hLVMkAGFuQ", moment("14/02/2015", "DD/MM/YYYY").toDate(), moment("15/02/2015", "DD/MM/YYYY").toDate(), ["Emitido", "Cobrado"], renderChecksPanels);*/
 
-    
+    function updateAllQueryVariables(){
+    	bankQueryId = $('#check_bank').val();
+    	queryStartDate = $('#queryStartDateInput').data("DateTimePicker").date();
+    	queryEndDate = $('#queryEndDateInput').data("DateTimePicker").date();
+    	$("#queryStartDate").text(queryStartDate.format("dddd DD/MM/YYYY"));
+	  	$("#queryEndDate").text(queryEndDate.format("dddd DD/MM/YYYY"));
+	  	getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+    }
 
     /* global $,document,console,Parse */
     $(document).ready(function() {
+
+        $('#queryStartDateInput').datetimepicker(
+          {
+            format: "DD/MM/YYYY",
+            locale: 'es'
+          }
+        );
+
+      	$('#queryEndDateInput').datetimepicker(
+          {
+            format: "DD/MM/YYYY",
+            locale: 'es'
+          }
+        );
 
 		// Hide date range label
 		$("#dateRangeLabel").hide();
 		loadBanksInSelect();
 
-		var queryStartDate;
-		var queryEndDate;
 		// Default value today
 		queryStartDate = queryEndDate = moment().locale("es");
-		var bankQueryId;
-
-		
-		var checkStatusArray = {};
 
 		// adding object to set    
 		checkStatusArray['Emitido'] = true;
@@ -292,34 +324,39 @@
 		checkStatusArray['Anulado'] = false;
 
 		$('#check_bank').change(function(){
-			bankQueryId = $(this).val();
-			getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+			updateAllQueryVariables();
 		});
 
-      $('#dayWeekMonthBtnGroup input[name="dayWeekMonthOptions"]').change(function () {
-   		 switch($(this).val()){
-		  	case "Semana":
-		  		queryStartDate = moment().locale("es").startOf('week');
-		  		queryEndDate = moment().locale("es").endOf('week');
-		  		break;
-		  	case "Mes":
-		  		queryStartDate = moment().locale("es").startOf('month');
-		  		queryEndDate = moment().locale("es").endOf('month');
-		  		break;
-		  	case "Hoy":
-		  	default:
-			  	queryStartDate = queryEndDate = moment().locale("es");
-		  		break;	
-		  }
-		  $("#queryStartDateInput").val(queryStartDate.format("DD/MM/YYYY"))
-		  $("#queryEndDateInput").val(queryEndDate.format("DD/MM/YYYY"))
-		  $("#queryStartDate").text(queryStartDate.format("dddd DD/MM/YYYY"));
-		  $("#queryEndDate").text(queryEndDate.format("dddd DD/MM/YYYY"));
-		  $("#dateRangeLabel").show();
+      	$('#dayWeekMonthBtnGroup input[name="dayWeekMonthOptions"]').change(function () {
+	   		 switch($(this).val()){
+			  	case "Semana":
+			  		queryStartDate = moment().locale("es").startOf('week');
+			  		queryEndDate = moment().locale("es").endOf('week');
+			  		break;
+			  	case "Mes":
+			  		queryStartDate = moment().locale("es").startOf('month');
+			  		queryEndDate = moment().locale("es").endOf('month');
+			  		break;
+			  	case "Hoy":
+			  	default:
+				  	queryStartDate = queryEndDate = moment().locale("es");
+			  		break;	
+			  }
+			  updateAllQueryVariables();
+			  /*getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);*/
 
-		  getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+	 	 });
 
-	  });
+
+	   $("#queryStartDateInput").on("dp.change",function (e) {
+	   		updateAllQueryVariables();
+            
+        });
+
+	   $("#queryEndDateInput").on("dp.change",function (e) {
+	   		updateAllQueryVariables();
+        });
+    
 
   	  $('#checkStatusBtnGroup input[name="checkStatusCheckbox"]').change(function () {
 			$('#checkStatusBtnGroup input[name="checkStatusCheckbox"]').each(function(){
@@ -333,8 +370,6 @@
 			getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
 	  });
 
-  	  	getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
-		
   	});
 
   </script>
