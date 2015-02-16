@@ -43,7 +43,7 @@
 	            </div>
 	            <div id="collapse{{objectId}}" class="panel-collapse collapse in">
 	                <div class="panel-body">
-	                	<p>Banco: <b>{{bank}}</b>  - <i># {{number}}</i></p>
+	                	<p>Banco: <b>{{bankName}}</b>  - <i># {{number}}</i></p>
 	                    <p>Fecha de emisión: <b>{{creationDateString}}</b></p>
 	                    <p>Fecha de cobro: <b>{{withdrawalDateString}}</b></p>
 	                </div>
@@ -100,6 +100,21 @@
 	    <input type="checkbox" name="checkStatusCheckbox" autocomplete="off" value="Anulado"><small>Anulado</small>
 	  </label>
 	</div>
+	<br />
+
+	<form class="form-inline">
+	  <div class="form-group">
+	    <label for="exampleInputName2">Desde: </label>
+	    <input type="text" class="form-control" id="queryStartDateInput">
+	  </div>
+	  <div class="form-group">
+	    <label for="exampleInputEmail2">Hasta: </label>
+	    <input type="email" class="form-control" id="queryEndDateInput">
+	  </div>
+	  <div class="form-group">
+	  	<select id="check_bank" name="check_bank" class="form-control"></select>
+	  </div>
+	</form>
 
     <br />
     <div id="dateRangeLabel">Mostrando cheques entre las fechas: <span id="queryStartDate"></span> y <span id="queryEndDate"></span></div>
@@ -115,6 +130,34 @@
     var parseJSID = "gcpK88Zuud0KLK07vYNXJcFGaSNIM3n4RkN3oUxs";
     Parse.initialize(parseAPPID, parseJSID);
 
+    function loadBanksInSelect(){
+		//Once again, we extend the Parse.Object class to make the Bank class
+      var BankObject = Parse.Object.extend("Bank");
+		//This time, we use Parse.Query to generate a new query, specifically querying the Bank table.
+      var query = new Parse.Query(BankObject);
+
+      //We set constraints on the query.
+      query.ascending('name');
+
+      // Here we will store the options retrived from the query
+      var bankOptionList='';
+
+      //We submit the query and pass in callback functions.
+      query.find({
+        success: function(results) {
+          for (var i = 0; i < results.length; i++) { 
+            var bank = results[i];
+            bankOptionList+='<option value="' + bank.id + '">' + bank.get('name') + '</option>';
+          }
+          bankOptionList+='<option value="' + null + '">' + 'Todos' + '</option>';
+          $("#check_bank").append(bankOptionList);
+        },
+        error: function(error) {
+          alert("Error obteniendo los bancos de la base de datos. Error code: " + error.message)
+        }
+      });
+    }
+
 	function getChecksForBankBetweenDates($bankId, $startDate, $endDate, $checkStatusArray, callback) {
   		
   		bankId = (typeof bankId === "undefined") ? null : bankId;
@@ -127,17 +170,19 @@
 		var mainQuery = new Parse.Query(CheckObject);
   		
   		// Matchink Bank
-		if ($bankId !== null) {
+		if ($bankId !== null && $bankId !== "null") {
 			var BankObject = Parse.Object.extend("Bank");
 			var innerBankQuery = new Parse.Query(BankObject);
 			innerBankQuery.equalTo("objectId", $bankId);
 			mainQuery.matchesQuery("bank", innerBankQuery);
 		}
+
+		// Tell Parse not to bring only the bank pointer but the bank object
+		mainQuery.include("bank");
 		
 		// Matching Entity
 		var entityCheckQuery = new Parse.Query(CheckObject);
 		entityCheckQuery.equalTo("entity", "Sarasa");
-
 
 		if(($startDate !== null )&& ($endDate !== null) ){
 			// Matching checks between dates
@@ -152,11 +197,14 @@
 
 
 		var checkCollection = mainQuery.collection();
-		checkCollection.fetch({
-		  success: function(results) {
-		  	console.log("Successfully retrieved " + results.length + " checks.");
-		  	var JSONresults = results.toJSON();
-	        callback(JSONresults);
+		mainQuery.find({
+		  success: function(checks) {
+		  	console.log("Successfully retrieved " + checks.length + " checks.");
+		  	for (var i = 0; i < checks.length; i++) { 
+	            var check = checks[i];
+	            var bank = check.get("bank");
+          	}
+	        callback(checks);
 		  }
 		});
 	}
@@ -178,12 +226,18 @@
 			console.log("No checks to display!");
 			return;
 		}
+		var bankTotals = {};
 		for (var i = 0; i < $checksJSONArray.length; i++) { 
-		      	var objectJSON = $checksJSONArray[i];
-		    	objectJSON.creationDateString = moment(objectJSON["creationDate"].iso).format("DD/MM/YYYY");
-		    	objectJSON.withdrawalDateString = moment(objectJSON["withdrawalDate"].iso).format("DD/MM/YYYY");
-		      	objectJSON["checkStatusClass"] =  function () {
-		      		switch(this.status){
+				var checkObject = $checksJSONArray[i];
+				var bankName = $checksJSONArray[i].get("bank").get("name");
+				console.log(bankTotals[bankName] ? bankTotals[bankName] : 0);
+				bankTotals[bankName] = parseFloat((bankTotals[bankName] ? bankTotals[bankName] : 0)) + parseFloat(checkObject.get("amount"));
+		      	var objectJSON = $checksJSONArray[i].toJSON();
+		      	objectJSON.bankName = bankName;
+		    	objectJSON.creationDateString = moment(checkObject.get("creationDate").iso).format("DD/MM/YYYY");
+		    	objectJSON.withdrawalDateString = moment(checkObject.get("withdrawalDate").iso).format("DD/MM/YYYY");
+		      	objectJSON.checkStatusClass =  function () {
+		      		switch(checkObject.get("status")){
 		      			case "Cobrado":
 		      				return "success";
 		      				break;
@@ -205,6 +259,8 @@
 				var output = Mustache.render(template, objectJSON);
 				$("#checksList").append(output);
 		    }
+		    console.log("totales:");
+		    console.log(bankTotals);
 		    $('#checksList .in').collapse('hide'); // Collapse all panels
 	}
 
@@ -218,11 +274,15 @@
 
 		// Hide date range label
 		$("#dateRangeLabel").hide();
+		loadBanksInSelect();
 
 		var queryStartDate;
 		var queryEndDate;
 		// Default value today
 		queryStartDate = queryEndDate = moment().locale("es");
+		var bankQueryId;
+
+		
 		var checkStatusArray = {};
 
 		// adding object to set    
@@ -230,6 +290,11 @@
 		checkStatusArray['Cobrado'] = false;
 		checkStatusArray['Rechazado'] = false;
 		checkStatusArray['Anulado'] = false;
+
+		$('#check_bank').change(function(){
+			bankQueryId = $(this).val();
+			getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+		});
 
       $('#dayWeekMonthBtnGroup input[name="dayWeekMonthOptions"]').change(function () {
    		 switch($(this).val()){
@@ -246,11 +311,13 @@
 			  	queryStartDate = queryEndDate = moment().locale("es");
 		  		break;	
 		  }
+		  $("#queryStartDateInput").val(queryStartDate.format("DD/MM/YYYY"))
+		  $("#queryEndDateInput").val(queryEndDate.format("DD/MM/YYYY"))
 		  $("#queryStartDate").text(queryStartDate.format("dddd DD/MM/YYYY"));
 		  $("#queryEndDate").text(queryEndDate.format("dddd DD/MM/YYYY"));
 		  $("#dateRangeLabel").show();
 
-		  getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+		  getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
 
 	  });
 
@@ -263,10 +330,10 @@
 				}
 			});
 			
-			getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+			getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
 	  });
 
-  	  	getChecksForBankBetweenDates("hLVMkAGFuQ", queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
+  	  	getChecksForBankBetweenDates(bankQueryId, queryStartDate.toDate(), queryEndDate.toDate(), getEnabledCheckStatuses(checkStatusArray), renderChecksPanels);
 		
   	});
 
